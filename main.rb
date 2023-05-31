@@ -24,6 +24,20 @@ module Waitable
   end
 end
 
+module Crashable
+  include Loggable
+  include Waitable
+  def try(times)
+    retries ||= 0
+    yield
+  rescue Exception => e
+    logger.error(self) { e }
+    wait(1.seconds, 'A problem has occurred. Please wait.')
+    retries += 1
+    retries < times ? retry : (raise e)
+  end
+end
+
 
 class Integer
   def seconds
