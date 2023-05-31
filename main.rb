@@ -24,6 +24,25 @@ module Waitable
   end
 end
 
+
+class Integer
+  def seconds
+    self
+  end
+
+  def minutes
+    self * 60
+  end
+
+  def hours
+    minutes * 60
+  end
+
+  def days
+    hours * 24
+  end
+end
+
 class Mailer
   include Loggable
   include Waitable
