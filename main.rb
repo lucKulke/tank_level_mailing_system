@@ -1,4 +1,5 @@
 require 'logger'
+require 'whirly'
 
 module Loggable
   def logger
