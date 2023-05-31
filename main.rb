@@ -23,3 +23,50 @@ module Waitable
     system 'clear'
   end
 end
+
+class Mailer
+  include Loggable
+  include Waitable
+
+  def initialize(parameters)
+  end
+
+  def send_to_all
+  end
+
+  def send_to
+  end
+
+  def login_smtp
+  end
+
+  def logout_smtp
+  end
+
+  def login_imap
+  end
+
+  def logout_imap
+  end
+
+  def check_mailbox
+  end
+
+end
+
+
+class DistanceInfomationScript
+  include Loggable
+  include Waitable
+
+  def initialize(interval, parameters)
+  end
+
+  def execute
+    
+  end
+
+end
+
+parameters = YAML.load_file('mailing_config.yml')
+DistanceInfomationScript.new(7.days, parameters).execute
