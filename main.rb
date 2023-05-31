@@ -168,6 +168,32 @@ class Mailer
 
 end
 
+class Sensor
+  include Loggable
+  include Crashable
+
+  def initialize(ssh_session_data)
+    self.ip_adress = ssh_session_data['ip_address']
+    self.pi_username = ssh_session_data['username']
+    self.pi_password = ssh_session_data['password']
+    self.path_to_script = ssh_session_data['script_path']
+  end
+
+  def get_data
+    result = ''
+    try(2) do
+      Net::SSH.start(ip_adress, pi_username, password: pi_password) do |ssh|
+        result = ssh.exec!(path_to_script)
+      end
+    end
+    result.delete("\n").to_i
+  end
+
+  private
+
+  attr_accessor :ip_adress, :pi_username, :pi_password, :path_to_script
+end
+
 # Todo: extend Integerclass with seconds, hours, days methods
 
 class InvalidDistanceError < StandardError
@@ -183,6 +209,7 @@ class DistanceInfomationScript
   def initialize(interval, parameters)
     @mailshot_interval = interval.to_i.days
     @mailer = Mailer.new(parameters['MAIL_ACCOUNT'], parameters['MAIL_SERVER'], parameters['RECIEVERS'])
+    @sensor = Sensor.new(parameters['SSH_SESSION_DATA_PI_SENSOR'])
     @tank_type = parameters['TANKDATA']['type']
     @tank_height = parameters['TANKDATA']['height']
     @check_level_interval = parameters['SCRIPT_INTERVAL']['check_level'].to_i.days
@@ -201,7 +228,7 @@ class DistanceInfomationScript
 
   private 
   attr_reader :mailshot_interval, :tank_height, :tank_type, :check_level_interval, :check_mailbox_interval
-  attr_accessor :mailer
+  attr_accessor :mailer, :sensor
 
   def update_loop
     time_end = Time.now + mailshot_interval
