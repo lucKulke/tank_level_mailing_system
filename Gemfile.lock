@@ -1,0 +1,15 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    unicode-display_width (2.4.2)
+    whirly (0.3.0)
+      unicode-display_width (>= 1.1)
+
+PLATFORMS
+  x86_64-darwin-20
+
+DEPENDENCIES
+  whirly (~> 0.3.0)
+
+BUNDLED WITH
+   2.4.12
