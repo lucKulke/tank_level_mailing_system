@@ -170,6 +170,12 @@ end
 
 # Todo: extend Integerclass with seconds, hours, days methods
 
+class InvalidDistanceError < StandardError
+  def initialize(msg = 'Sensor measurement data is invalid. Check if sensor is mounted correctly and is not blocked..')
+    super
+  end
+end
+
 class DistanceInfomationScript
   include Loggable
   include Waitable
@@ -229,7 +235,7 @@ class DistanceInfomationScript
 
   def get_fill_level
     new_distance = 20#sensor.get_data
-    # raise InvalidDistanceError if new_distance > tank_height
+    raise InvalidDistanceError if new_distance > tank_height
 
     convert_distance_to_percent(new_distance, tank_height)
   end
