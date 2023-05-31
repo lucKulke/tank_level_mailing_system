@@ -59,30 +59,111 @@ end
 
 class Mailer
   include Loggable
+  include Crashable
   include Waitable
 
-  def initialize(parameters)
+  def initialize(mail_account, mail_server, routine_receivers)
+    self.sender_mail_address = mail_account['email_address']
+    self.sender_mail_password = mail_account['password']
+    self.sender_provider_smtp_domain = mail_server['smtp_domain']
+    self.sender_provider_smtp_portnumber = mail_server['smtp_port'].to_i
+    self.sender_provider_imap_domain = mail_server['imap_domain']
+    self.sender_provider_imap_portnumber = mail_server['imap_port'].to_i
+    self.routine_receivers = routine_receivers['email_addresses'].split(',')
   end
 
-  def send_to_all
+  def send_to_all(tank_type, text)
+    login_smtp
+    routine_receivers.each do |receiver|
+      send_to(receiver, tank_type, text)
+    end
+    logout_smtp
   end
 
-  def send_to
+  def send_to(receiver, tank_type, text)
+    wait(3.seconds, "send message to #{receiver}..")
+    message = self.message(sender_mail_address, receiver, tank_type, text)
+    smtp = service
+    smtp.send_message(message, sender_mail_address, receiver)
   end
 
   def login_smtp
+    try(3) do
+      self.service = Net::SMTP.start(sender_provider_smtp_domain, sender_provider_smtp_portnumber, 'localhost',
+                                     sender_mail_address, sender_mail_password, :plain)
+    end
   end
 
   def logout_smtp
+    service.finish
   end
 
   def login_imap
+    connecting_imap
+    authenticate_imap
+    logger.info('Mailer') { 'Login in to IMAP service successful' }
   end
 
   def logout_imap
+    service.disconnect
   end
 
   def check_mailbox
+    requests = {}
+    imap = service
+    imap.select('DataRequests') # folder in mail account
+
+    messages = imap.search(['ALL']).each do |message_id|
+      sender = fetch_sender(imap, message_id)
+      requests[sender] = fetch_subject(imap, message_id)
+    end
+
+    delete_requests(messages, imap) unless requests.empty?
+    requests
+  end
+
+  private
+
+  attr_accessor :sender_mail_address, :sender_mail_password, :sender_provider_smtp_domain,
+                :sender_provider_smtp_portnumber, :sender_provider_imap_domain, :sender_provider_imap_portnumber, :routine_receivers, :service
+
+  def delete_requests(messages, imap)
+    messages.each { |message_id| imap.store(message_id, '+FLAGS', [:Deleted]) } # add delete flag to messages
+    imap.expunge # deletes all messages with :delete flag
+  end
+
+  def fetch_sender(imap, message_id)
+    envelope = imap.fetch(message_id, 'ENVELOPE')[0].attr['ENVELOPE']
+    adress_mailbox = envelope.sender[0].mailbox
+    adress_host = envelope.sender[0].host
+    "#{adress_mailbox}@#{adress_host}"
+  end
+
+  def fetch_subject(imap, message_id)
+    envelope = imap.fetch(message_id, 'BODY[HEADER.FIELDS (SUBJECT)]')
+    envelope[0].attr['BODY[HEADER.FIELDS (SUBJECT)]'][9..-5] # get subject string
+  end
+
+  def connecting_imap
+    try(3) do
+      self.service = Net::IMAP.new(sender_provider_imap_domain, port: sender_provider_imap_portnumber, ssl: true)
+    end
+  end
+
+  def authenticate_imap
+    try(3) do
+      service.authenticate('LOGIN', sender_mail_address, sender_mail_password)
+    end
+  end
+
+  def message(sender_mail_address, receiver, tank_type, text)
+    <<~MESSAGE_END
+      From: #{tank_type} <#{sender_mail_address}>
+      To: VIP <#{receiver}>
+      Subject: Level of #{tank_type}
+
+      #{text}
+    MESSAGE_END
   end
 
 end
@@ -95,7 +176,7 @@ class DistanceInfomationScript
 
   def initialize(interval, parameters)
     @mailshot_interval = interval.to_i.days
-    @mailer = Mailer.new(parameters)
+    @mailer = Mailer.new(parameters['MAIL_ACCOUNT'], parameters['MAIL_SERVER'], parameters['RECIEVERS'])
     @tank_type = parameters['TANKDATA']['type']
     @tank_height = parameters['TANKDATA']['height']
     @check_level_interval = parameters['SCRIPT_INTERVAL']['check_level'].to_i.days
