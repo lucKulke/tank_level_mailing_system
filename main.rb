@@ -212,13 +212,19 @@ class DistanceInfomationScript
     while Time.now < time_end
       requests = mailer.check_mailbox
       send_responses(requests)
-      wait(check_mailbox_interval, 'Listening for requests every 30 seconds..')
+      wait(check_mailbox_interval, "Listening for requests every #{check_mailbox_interval} seconds..")
     end
     mailer.logout_imap
   end
 
   def select_text(fill_level)
-    
+    if fill_level > 80
+      "Warning!!! The tank is #{fill_level}% full.\n\nPlease inform the President! Number: 030 234324"
+    elsif interval_message
+      "Update-Routine. The tank is #{fill_level}% full."
+    else
+      "The tank is #{fill_level}% full."
+    end
   end
 
   def get_fill_level
