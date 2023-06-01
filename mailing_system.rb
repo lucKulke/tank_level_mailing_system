@@ -225,10 +225,8 @@ class TankLevelInformationSystem
   def execute
     logger.info('DistanceInformationScript') { 'Programme has started.' }
     loop do
-      fill_level = get_fill_level
-      wait(3.seconds, 'Sending interval message..')
-      #mailer.send_to_all(tank_type, select_text(fill_level, interval_message: true))
-      update_loop
+      mailshot
+      check_level_routine
     end
   end
 
@@ -236,9 +234,14 @@ class TankLevelInformationSystem
   attr_reader :mailshot_interval, :tank_height, :tank_type, :check_level_interval, :check_mailbox_interval, :request_subject
   attr_accessor :mailer, :sensor
 
-  def update_loop
-    time_end = Time.now + mailshot_interval
-    while Time.now < time_end
+  def mailshot
+    fill_level = get_fill_level
+    wait(3.seconds, 'Sending interval message..')
+    mailer.send_to_all(tank_type, select_text(fill_level, interval_message: true))
+  end
+
+  def check_level_routine
+    interval(mailshot_interval) do
       listen_for_data_request
       fill_level = get_fill_level
       mailer.send_to_all(tank_type, select_text(fill_level)) if fill_level > 80 # percent
@@ -246,14 +249,20 @@ class TankLevelInformationSystem
   end
 
   def listen_for_data_request
-    time_end = Time.now + check_level_interval
     mailer.login_imap
-    while Time.now < time_end
+    interval(check_level_interval) do
       requests = mailer.check_mailbox
       send_responses(requests)
       wait(check_mailbox_interval, "Check mailbox every #{check_mailbox_interval} seconds..")
     end
     mailer.logout_imap
+  end
+
+  def interval(int)
+    time_end = Time.now + int
+    while Time.now < time_end
+      yield
+    end
   end
 
   def select_text(fill_level, interval_message = false)
@@ -292,5 +301,5 @@ class TankLevelInformationSystem
 
 end
 
-parameters = YAML.load_file('config.yml')
+p parameters = YAML.load_file('config.yml')
 TankLevelInformationSystem.new(parameters['SCRIPT_INTERVAL']['mailshot'], parameters).execute
