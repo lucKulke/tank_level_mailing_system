@@ -215,10 +215,11 @@ class DistanceInfomationScript
     @mailshot_interval = interval.to_i.days
     @mailer = Mailer.new(parameters['MAIL_ACCOUNT'], parameters['MAIL_SERVER'], parameters['RECIEVERS'])
     @sensor = Sensor.new(parameters['SSH_SESSION_DATA_PI_SENSOR'])
-    @tank_type = parameters['TANKDATA']['type']
-    @tank_height = parameters['TANKDATA']['height']
+    @tank_type = parameters['TANK_DATA']['type']
+    @tank_height = parameters['TANK_DATA']['height'].to_i
     @check_level_interval = parameters['SCRIPT_INTERVAL']['check_level'].to_i.days
     @check_mailbox_interval = parameters['SCRIPT_INTERVAL']['check_mailbox'].to_i.seconds
+    @request_subject = parameters['RECIEVERS']['request_subject'] 
   end
 
   def execute
@@ -226,13 +227,13 @@ class DistanceInfomationScript
     loop do
       fill_level = get_fill_level
       wait(3.seconds, 'Sending interval message..')
-      mailer.send_to_all
+      #mailer.send_to_all(tank_type, select_text(fill_level, interval_message: true))
       update_loop
     end
   end
 
   private 
-  attr_reader :mailshot_interval, :tank_height, :tank_type, :check_level_interval, :check_mailbox_interval
+  attr_reader :mailshot_interval, :tank_height, :tank_type, :check_level_interval, :check_mailbox_interval, :request_subject
   attr_accessor :mailer, :sensor
 
   def update_loop
@@ -250,12 +251,12 @@ class DistanceInfomationScript
     while Time.now < time_end
       requests = mailer.check_mailbox
       send_responses(requests)
-      wait(check_mailbox_interval, "Listening for requests every #{check_mailbox_interval} seconds..")
+      wait(check_mailbox_interval, "Check mailbox every #{check_mailbox_interval} seconds..")
     end
     mailer.logout_imap
   end
 
-  def select_text(fill_level)
+  def select_text(fill_level, interval_message = false)
     if fill_level > 80
       "Warning!!! The tank is #{fill_level}% full.\n\nPlease inform the President! Number: 030 234324"
     elsif interval_message
@@ -291,5 +292,5 @@ class DistanceInfomationScript
 
 end
 
-parameters = YAML.load_file('mailing_config.yml')
+parameters = YAML.load_file('config.yml')
 DistanceInfomationScript.new(parameters['SCRIPT_INTERVAL']['mailshot'], parameters).execute
