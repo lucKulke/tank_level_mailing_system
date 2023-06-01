@@ -100,17 +100,24 @@ class Mailer
   end
 
   def logout_smtp
-    service.finish
+    response = service.finish
+    response.success?
   end
 
   def login_imap
     connecting_imap
     authenticate_imap
     logger.info('Mailer') { 'Login in to IMAP service successful' }
+    imap_login_success?
+  end
+
+  def imap_login_success?
+    service.disconnected? == false
   end
 
   def logout_imap
     service.disconnect
+    service.disconnected?
   end
 
   def check_mailbox
@@ -242,20 +249,28 @@ class TankLevelInformationSystem
 
   def check_level_routine
     interval(mailshot_interval) do
-      listen_for_data_request
-      fill_level = get_fill_level
-      mailer.send_to_all(tank_type, select_text(fill_level)) if fill_level > 80 # percent
+      check_level
     end
   end
 
-  def listen_for_data_request
+  def check_level
+    listen_for_data_request_routie
+    fill_level = get_fill_level
+    mailer.send_to_all(tank_type, select_text(fill_level)) if fill_level > 80 # percent
+  end
+
+  def listen_for_data_request_routie
     mailer.login_imap
     interval(check_level_interval) do
-      requests = mailer.check_mailbox
-      send_responses(requests)
-      wait(check_mailbox_interval, "Check mailbox every #{check_mailbox_interval} seconds..")
+      process_requests
     end
     mailer.logout_imap
+  end
+
+  def process_requests
+    wait(check_mailbox_interval, "Check mailbox every #{check_mailbox_interval} seconds..")
+    requests = mailer.check_mailbox
+    send_responses(requests)
   end
 
   def interval(int)
