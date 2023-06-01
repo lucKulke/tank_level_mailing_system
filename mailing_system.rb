@@ -207,7 +207,7 @@ class InvalidDistanceError < StandardError
   end
 end
 
-class DistanceInfomationScript
+class TankLevelInformationSystem
   include Loggable
   include Waitable
 
@@ -293,4 +293,4 @@ class DistanceInfomationScript
 end
 
 parameters = YAML.load_file('config.yml')
-DistanceInfomationScript.new(parameters['SCRIPT_INTERVAL']['mailshot'], parameters).execute
+TankLevelInformationSystem.new(parameters['SCRIPT_INTERVAL']['mailshot'], parameters).execute
