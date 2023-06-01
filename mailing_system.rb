@@ -90,6 +90,7 @@ class Mailer
     message = self.message(sender_mail_address, receiver, tank_type, text)
     smtp = service
     smtp.send_message(message, sender_mail_address, receiver)
+    true
   end
 
   def login_smtp
@@ -97,27 +98,24 @@ class Mailer
       self.service = Net::SMTP.start(sender_provider_smtp_domain, sender_provider_smtp_portnumber, 'localhost',
                                      sender_mail_address, sender_mail_password, :plain)
     end
+    service.started? #returns boolean
   end
 
   def logout_smtp
     response = service.finish
-    response.success?
+    response.success? #returns boolean
   end
 
   def login_imap
     connecting_imap
     authenticate_imap
     logger.info('Mailer') { 'Login in to IMAP service successful' }
-    imap_login_success?
-  end
-
-  def imap_login_success?
-    service.disconnected? == false
+    imap_login_success?#returns boolean
   end
 
   def logout_imap
     service.disconnect
-    service.disconnected?
+    service.disconnected? #returns boolean
   end
 
   def check_mailbox
@@ -131,7 +129,7 @@ class Mailer
     end
 
     delete_requests(messages, imap) unless requests.empty?
-    requests
+    requests #returns hash
   end
 
   private
@@ -141,7 +139,11 @@ class Mailer
 
   def delete_requests(messages, imap)
     messages.each { |message_id| imap.store(message_id, '+FLAGS', [:Deleted]) } # add delete flag to messages
-    imap.expunge # deletes all messages with :delete flag
+    imap.expunge # deletes all messages with :delete flag returns array
+  end
+
+  def imap_login_success?
+    service.disconnected? == false
   end
 
   def fetch_sender(imap, message_id)
@@ -316,5 +318,5 @@ class TankLevelInformationSystem
 
 end
 
-p parameters = YAML.load_file('config.yml')
-TankLevelInformationSystem.new(parameters['SCRIPT_INTERVAL']['mailshot'], parameters).execute
+# p parameters = YAML.load_file('config.yml')
+# TankLevelInformationSystem.new(parameters['SCRIPT_INTERVAL']['mailshot'], parameters).execute
