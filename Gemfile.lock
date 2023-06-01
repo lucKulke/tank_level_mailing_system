@@ -1,15 +1,33 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    date (3.3.3)
+    logger (1.5.3)
+    net-imap (0.3.4)
+      date
+      net-protocol
+    net-protocol (0.2.1)
+      timeout
+    net-smtp (0.3.3)
+      net-protocol
+    net-ssh (7.1.0)
+    timeout (0.3.2)
     unicode-display_width (2.4.2)
     whirly (0.3.0)
       unicode-display_width (>= 1.1)
+    yaml (0.2.1)
 
 PLATFORMS
   x86_64-darwin-20
+  x86_64-darwin-22
 
 DEPENDENCIES
+  logger
+  net-imap
+  net-smtp
+  net-ssh
   whirly (~> 0.3.0)
+  yaml
 
 BUNDLED WITH
    2.4.12
